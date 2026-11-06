@@ -19,14 +19,13 @@ package com.elvishew.xlog.internal.printer.file.backup;
 import com.elvishew.xlog.printer.file.backup.BackupStrategy2;
 
 import java.io.File;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class BackupUtil {
 
   /**
-   * Backup the logging file, shifting existing backups if needed (when maxBackupIndex has been
-   * reached)
+   * Backup the logging file. The backup is saved with the lowest free index, until maxBackupIndex
+   * is in use. After that, the existing backup of the same logging file with the oldest content
+   * (the least recently modified one) is overwritten. Existing backups are never renamed.
    *
    * @param loggingFile    the logging file
    * @param backupStrategy the strategy should be use when backing up
@@ -39,19 +38,23 @@ public class BackupUtil {
     int maxBackupIndex = backupStrategy.getMaxBackupIndex();
     if (maxBackupIndex > 0) {
       backupFile = new File(path, backupStrategy.getBackupFileName(loggingFileName, maxBackupIndex));
+      File target = null;
       if (backupFile.exists()) {
         // maxBackupIndex is already being used, overwrite the oldest file
-        File oldestBackupFile = findOldestFile(path, maxBackupIndex);
-        loggingFile.renameTo(oldestBackupFile);
+        File oldestBackupFile = findOldestBackupFile(path, loggingFileName, backupStrategy, maxBackupIndex);
+        target = oldestBackupFile != null ? oldestBackupFile : backupFile;
       } else {
         // maxBackupIndex not reached yet; use the lowest available index for the backup file
         for (int i = 1; i <= maxBackupIndex; i++) {
           nextBackupFile = new File(path, backupStrategy.getBackupFileName(loggingFileName, i));
           if (!nextBackupFile.exists()) {
-            loggingFile.renameTo(nextBackupFile);
+            target = nextBackupFile;
             break;
           }
         }
+      }
+      if (target != null && loggingFile.renameTo(target)) {
+        markAsNewestBackup(target, path, loggingFileName, backupStrategy, maxBackupIndex);
       }
     } else if (maxBackupIndex == BackupStrategy2.NO_LIMIT) {
       for (int i = 1; i < Integer.MAX_VALUE; i++) {
@@ -66,28 +69,52 @@ public class BackupUtil {
     }
   }
 
-  private static File findOldestFile(String dirPath, int max) {
-    File dir = new File(dirPath);
-    if (dir == null || !dir.isDirectory())
-      return null;
+  /**
+   * Make sure that the backup that has just been created is the most recently modified one among
+   * the backups of its logging file.
+   * <p>
+   * The backup holds the newest content, and the last modified time is what tells the oldest backup
+   * apart when recycling. Renaming keeps the last modified time that the logging file had, which
+   * could be earlier than (or the same as) the one of an existing backup, if the clock of the device
+   * was set back, or if its resolution is not enough to tell apart two consecutive backups. In that
+   * case, set it just after the newest existing backup, so the age of the backups never gets mixed
+   * up.
+   */
+  private static void markAsNewestBackup(File newBackup, String dirPath, String loggingFileName,
+                                         BackupStrategy2 backupStrategy, int max) {
+    long newestOther = Long.MIN_VALUE;
+    for (int i = 1; i <= max; i++) {
+      File other = new File(dirPath, backupStrategy.getBackupFileName(loggingFileName, i));
+      if (other.equals(newBackup) || !other.isFile()) continue;
 
-    Pattern pattern = Pattern.compile(".*\\.(\\d+)$");
+      newestOther = Math.max(newestOther, other.lastModified());
+    }
+    if (newestOther != Long.MIN_VALUE && newBackup.lastModified() <= newestOther) {
+      newBackup.setLastModified(newestOther + 1);
+    }
+  }
+
+  /**
+   * Find the oldest (least recently modified) existing backup of the given logging file.
+   * <p>
+   * Only the backups that belong to {@code loggingFileName} are considered, i.e. the files named by
+   * {@code backupStrategy.getBackupFileName(loggingFileName, i)} for {@code i} in
+   * {@code 1..max}. Other files in the same directory (such as the backups of another day's log
+   * file) are never touched.
+   *
+   * @return the oldest existing backup file, or null if none of the candidates exists
+   */
+  private static File findOldestBackupFile(String dirPath, String loggingFileName,
+                                           BackupStrategy2 backupStrategy, int max) {
     File oldestFile = null;
+    for (int i = 1; i <= max; i++) {
+      File candidate = new File(dirPath, backupStrategy.getBackupFileName(loggingFileName, i));
+      if (!candidate.isFile()) continue;
 
-    for (File file : dir.listFiles()) {
-      if (!file.isFile()) continue;
-
-      Matcher matcher = pattern.matcher(file.getName());
-      if (matcher.matches()) {
-        int n = Integer.parseInt(matcher.group(1));
-        if (n >= 1 && n <= max) {
-          if (oldestFile == null || file.lastModified() < oldestFile.lastModified()) {
-            oldestFile = file;
-          }
-        }
+      if (oldestFile == null || candidate.lastModified() < oldestFile.lastModified()) {
+        oldestFile = candidate;
       }
     }
-
     return oldestFile;
   }
 

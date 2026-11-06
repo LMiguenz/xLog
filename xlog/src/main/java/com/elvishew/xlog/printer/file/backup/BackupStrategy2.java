@@ -33,10 +33,14 @@ public interface BackupStrategy2 extends BackupStrategy {
    * <p>
    * Generally, the max index should be greater than 1, and recommended to be less than 10.
    * <p>
-   * Imagine the normal log file name is 'log', and max backup index is 'n', as the log grows,
-   * a log record would go from 'log' to 'log.bak.1', then to 'log.bak.2', 'log.bak.3', and finally
-   * to 'log.bak.n', the greater index, the older log.
-   * <br>After that, the log record will no longer exist in the file system.
+   * Imagine the normal log file name is 'log', and max backup index is 'n'. Each time the log is
+   * backed up, it is saved as 'log.bak.i', where 'i' is the lowest index that is not in use,
+   * from 'log.bak.1' to 'log.bak.n'. Existing backups are never renamed.
+   * <br>Once all the indexes are in use, the backup with the oldest content (the one that was
+   * least recently modified) is overwritten, so the backups kept are always the most recent ones.
+   * The records that were in the overwritten backup will no longer exist in the file system.
+   * <br>Note that the index does NOT tell how old a backup is, check its last modified time
+   * instead.
    * <p>
    * If you don't want to limit the max index, then return {@link #NO_LIMIT}.
    * <br>With returning {@link #NO_LIMIT}, When you backing up, the oldest log would be saved to
