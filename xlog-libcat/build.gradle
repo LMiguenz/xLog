@@ -18,8 +18,8 @@ apply plugin: 'com.android.library'
 apply from: '../maven-push.gradle'
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.3"
+    namespace 'com.elvishew.xlog.libcat'
+    compileSdk 35
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -27,8 +27,7 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 14
-        targetSdkVersion 29
+        minSdk 14
     }
 
     buildTypes {
@@ -40,6 +39,6 @@ android {
 }
 
 dependencies {
-    api 'com.elvishew:xlog:1.11.1'
+    api project(':xlog')
     api 'org.aspectj:aspectjrt:1.9.5'
 }

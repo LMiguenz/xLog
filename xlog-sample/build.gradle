@@ -1,9 +1,12 @@
 apply plugin: 'com.android.application'
-apply plugin: 'android-aspectjx'
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.3"
+    namespace 'com.elvishew.xlogsample'
+    compileSdk 35
+
+    buildFeatures {
+        buildConfig true
+    }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -12,30 +15,24 @@ android {
 
     defaultConfig {
         applicationId "com.elvishew.xlogsample"
-        minSdkVersion 14
-        targetSdkVersion 29
+        minSdk 21
+        targetSdk 34
         versionCode 1
         versionName "1.0"
     }
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
 
-aspectjx {
-    exclude 'androidx.appcompat'
-    exclude 'android.support'
-}
-
 dependencies {
-    implementation 'com.elvishew:xlog:1.11.1'
-    implementation 'com.elvishew:xlog-libcat:1.0.0'
+    implementation project(':xlog')
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'com.google.android.material:material:1.3.0-alpha02'
     implementation 'androidx.appcompat:appcompat:1.3.0-alpha02'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.2'
 }

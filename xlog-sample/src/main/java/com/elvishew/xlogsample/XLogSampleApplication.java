@@ -24,7 +24,6 @@ import com.elvishew.xlog.LogLevel;
 import com.elvishew.xlog.XLog;
 import com.elvishew.xlog.flattener.ClassicFlattener;
 import com.elvishew.xlog.interceptor.BlacklistTagsFilterInterceptor;
-import com.elvishew.xlog.libcat.LibCat;
 import com.elvishew.xlog.printer.AndroidPrinter;
 import com.elvishew.xlog.printer.Printer;
 import com.elvishew.xlog.printer.file.FilePrinter;
@@ -103,8 +102,5 @@ public class XLogSampleApplication extends Application {
 
     // For future usage: partial usage in MainActivity.
     globalFilePrinter = filePrinter;
-
-    // Intercept all logs(including logs logged by third party modules/libraries) and print them to file.
-    LibCat.config(true, filePrinter);
   }
 }
